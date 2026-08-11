@@ -1,9 +1,9 @@
 package com.magnetar.janus
 
-import com.magnetar.janus.model.SplitPlanner
+import com.magnetar.janus.data.ConversionProgress
 import com.magnetar.janus.model.ConversionSupport
 import com.magnetar.janus.model.MediaKind
-import com.magnetar.janus.data.ConversionProgress
+import com.magnetar.janus.model.SplitPlanner
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -21,11 +21,10 @@ class SplitPlannerTest {
         assertEquals(0.5f, ConversionProgress(1, 2).fraction)
         assertEquals(0f, ConversionProgress(0, 0).fraction)
     }
-    @Test fun presetDurations_areWhatsAppPresets() =
-        assertEquals(listOf(30L, 60L, 90L), SplitPlanner.presetDurations())
 
-    @Test fun validateDuration_acceptsPositiveDurationWithinMedia() =
-        assertTrue(SplitPlanner.validateDuration(60, 277))
+    @Test fun presetDurations_areWhatsAppPresets() = assertEquals(listOf(30L, 60L, 90L), SplitPlanner.presetDurations())
+
+    @Test fun validateDuration_acceptsPositiveDurationWithinMedia() = assertTrue(SplitPlanner.validateDuration(60, 277))
 
     @Test fun validateDuration_rejectsInvalidValues() {
         assertFalse(SplitPlanner.validateDuration(0, 277))
@@ -41,10 +40,14 @@ class SplitPlannerTest {
         assertEquals(listOf(12L), SplitPlanner.automaticSegments(12, 30).map { it.durationSeconds })
 
     @Test(expected = IllegalArgumentException::class)
-    fun automaticSegments_rejectZeroSegmentDuration() { SplitPlanner.automaticSegments(60, 0) }
+    fun automaticSegments_rejectZeroSegmentDuration() {
+        SplitPlanner.automaticSegments(60, 0)
+    }
 
     @Test(expected = IllegalArgumentException::class)
-    fun automaticSegments_rejectZeroMediaDuration() { SplitPlanner.automaticSegments(0, 60) }
+    fun automaticSegments_rejectZeroMediaDuration() {
+        SplitPlanner.automaticSegments(0, 60)
+    }
 
     @Test fun manualSegments_sortDeduplicateAndIgnoreOutOfRangeCuts() =
         assertEquals(listOf(30L, 30L, 40L), SplitPlanner.manualSegments(100, listOf(60, 30, 30, 0, 100, 120)).map { it.durationSeconds })
@@ -53,10 +56,17 @@ class SplitPlannerTest {
         assertEquals(listOf(100L), SplitPlanner.manualSegments(100, emptyList()).map { it.durationSeconds })
 
     @Test(expected = IllegalArgumentException::class)
-    fun manualSegments_rejectZeroMediaDuration() { SplitPlanner.manualSegments(0, emptyList()) }
+    fun manualSegments_rejectZeroMediaDuration() {
+        SplitPlanner.manualSegments(0, emptyList())
+    }
 
     @Test fun segmentDuration_isEndMinusStart() =
-        assertEquals(7L, com.magnetar.janus.model.Segment(3, 10).durationSeconds)
+        assertEquals(
+            7L,
+            com.magnetar.janus.model
+                .Segment(3, 10)
+                .durationSeconds,
+        )
 
     @Test fun formatDuration_supportsMinutesHoursAndNegativeInput() {
         assertEquals("04:37", SplitPlanner.formatDuration(277))

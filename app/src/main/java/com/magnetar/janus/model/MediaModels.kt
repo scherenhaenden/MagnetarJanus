@@ -1,6 +1,7 @@
 package com.magnetar.janus.model
 
 enum class MediaKind { VIDEO, AUDIO }
+
 enum class Operation { CONVERT, SPLIT, AUDIO }
 
 data class MediaInfo(
@@ -14,19 +15,28 @@ data class MediaInfo(
     val frameRate: String? = null,
     val bitrate: String? = null,
     val codec: String? = null,
-    val container: String? = null
+    val container: String? = null,
 )
 
-data class Segment(val startSeconds: Long, val endSeconds: Long) {
+data class Segment(
+    val startSeconds: Long,
+    val endSeconds: Long,
+) {
     val durationSeconds: Long get() = endSeconds - startSeconds
 }
 
 object SplitPlanner {
     fun presetDurations(): List<Long> = listOf(30L, 60L, 90L)
-    fun validateDuration(durationSeconds: Long, mediaDurationSeconds: Long): Boolean =
-        durationSeconds > 0 && mediaDurationSeconds > 0 && durationSeconds <= mediaDurationSeconds
 
-    fun automaticSegments(mediaDurationSeconds: Long, segmentDurationSeconds: Long): List<Segment> {
+    fun validateDuration(
+        durationSeconds: Long,
+        mediaDurationSeconds: Long,
+    ): Boolean = durationSeconds > 0 && mediaDurationSeconds > 0 && durationSeconds <= mediaDurationSeconds
+
+    fun automaticSegments(
+        mediaDurationSeconds: Long,
+        segmentDurationSeconds: Long,
+    ): List<Segment> {
         require(mediaDurationSeconds > 0) { "Media duration must be positive" }
         require(segmentDurationSeconds > 0) { "Segment duration must be positive" }
         return (0 until mediaDurationSeconds step segmentDurationSeconds).map { start ->
@@ -34,7 +44,10 @@ object SplitPlanner {
         }
     }
 
-    fun manualSegments(mediaDurationSeconds: Long, boundaries: List<Long>): List<Segment> {
+    fun manualSegments(
+        mediaDurationSeconds: Long,
+        boundaries: List<Long>,
+    ): List<Segment> {
         require(mediaDurationSeconds > 0) { "Media duration must be positive" }
         val cuts = boundaries.filter { it > 0 && it < mediaDurationSeconds }.distinct().sorted()
         return (listOf(0L) + cuts + mediaDurationSeconds).zipWithNext(::Segment)
@@ -50,8 +63,7 @@ object SplitPlanner {
 }
 
 object ConversionSupport {
-    fun supportedOutputContainers(kind: MediaKind): List<String> =
-        if (kind == MediaKind.VIDEO) listOf("MP4") else listOf("MP4")
+    fun supportedOutputContainers(kind: MediaKind): List<String> = if (kind == MediaKind.VIDEO) listOf("MP4") else listOf("MP4")
 
     fun canRemuxToMp4(kind: MediaKind): Boolean = kind == MediaKind.VIDEO || kind == MediaKind.AUDIO
 }

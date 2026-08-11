@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:function-naming")
+
 package com.magnetar.janus
 
 import android.content.Intent
@@ -6,7 +8,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.net.toUri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -14,8 +15,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import com.magnetar.janus.data.MediaMetadataReader
+import androidx.core.net.toUri
 import com.magnetar.janus.data.ConversionRequest
+import com.magnetar.janus.data.MediaMetadataReader
 import com.magnetar.janus.data.Mp4RemuxConverter
 import com.magnetar.janus.model.MediaInfo
 import com.magnetar.janus.model.Operation
@@ -43,51 +45,85 @@ private fun MediaPickerApp() {
     var processing by remember { mutableStateOf(false) }
     var pendingConversion by remember { mutableStateOf<MediaInfo?>(null) }
     val cancelSignal = remember { AtomicBoolean(false) }
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        val uri = result.data?.data ?: return@rememberLauncherForActivityResult
-        runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-        scope.launch(Dispatchers.IO) {
-            loading = true
-            error = null
-            processingMessage = null
-            MediaMetadataReader(context).read(uri).onSuccess { media = it }.onFailure { error = it.message ?: "Unable to inspect the selected media" }
-            loading = false
-        }
-    }
-    val outputPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("video/mp4")) { outputUri ->
-        val selected = pendingConversion ?: return@rememberLauncherForActivityResult
-        if (outputUri == null || selected.sourceUri == null) {
-            pendingConversion = null
-            return@rememberLauncherForActivityResult
-        }
-        scope.launch(Dispatchers.IO) {
-            processing = true
-            processingMessage = "Converting to MP4… 0%"
-            cancelSignal.set(false)
-            val result = Mp4RemuxConverter(context).convert(ConversionRequest(selected.sourceUri.toUri(), outputUri, cancelSignal::get)) { progress ->
-                processingMessage = "Converting to MP4… ${(progress.fraction * 100).toInt()}%"
+    val picker =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            val uri = result.data?.data ?: return@rememberLauncherForActivityResult
+            runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            scope.launch(Dispatchers.IO) {
+                loading = true
+                error = null
+                processingMessage = null
+                MediaMetadataReader(context).read(uri).onSuccess { media = it }.onFailure {
+                    error =
+                        it.message ?: "Unable to inspect the selected media"
+                }
+                loading = false
             }
-            processingMessage = result.fold({ "Conversion complete: ${selected.name.substringBeforeLast('.')}.mp4" }, { if (cancelSignal.get()) "Conversion cancelled" else "Conversion failed: ${it.message ?: "unsupported media"}" })
-            processing = false
-            pendingConversion = null
         }
-    }
-    JanusApp(media = media, loading = loading, processing = processing, errorMessage = error, processingMessage = processingMessage, onClearError = { error = null }, onClearMedia = { media = null; processingMessage = null }, onCancelProcessing = { cancelSignal.set(true); processingMessage = "Cancelling…" }, onSelectMedia = {
-        picker.launch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-            type = "*/*"
-            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("video/*", "audio/*"))
-            addCategory(Intent.CATEGORY_OPENABLE)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
-        })
-    }, onPrimaryAction = { operation ->
-        val selected = media
-        if (operation != Operation.CONVERT) {
-            processingMessage = "${operation.name.lowercase().replaceFirstChar { it.uppercase() }} processing is next in the queue"
-        } else if (selected == null || selected.sourceUri == null) {
-            error = "Select readable media before converting"
-        } else {
-            pendingConversion = selected
-            outputPicker.launch("${selected.name.substringBeforeLast('.')}.mp4")
+    val outputPicker =
+        rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("video/mp4")) { outputUri ->
+            val selected = pendingConversion ?: return@rememberLauncherForActivityResult
+            if (outputUri == null || selected.sourceUri == null) {
+                pendingConversion = null
+                return@rememberLauncherForActivityResult
+            }
+            scope.launch(Dispatchers.IO) {
+                processing = true
+                processingMessage = "Converting to MP4… 0%"
+                cancelSignal.set(false)
+                val result =
+                    Mp4RemuxConverter(
+                        context,
+                    ).convert(ConversionRequest(selected.sourceUri.toUri(), outputUri, cancelSignal::get)) { progress ->
+                        processingMessage = "Converting to MP4… ${(progress.fraction * 100).toInt()}%"
+                    }
+                processingMessage =
+                    result.fold({
+                        "Conversion complete: ${selected.name.substringBeforeLast('.')}.mp4"
+                    }, { if (cancelSignal.get()) "Conversion cancelled" else "Conversion failed: ${it.message ?: "unsupported media"}" })
+                processing = false
+                pendingConversion = null
+            }
         }
-    })
+    JanusApp(
+        media = media,
+        loading = loading,
+        processing = processing,
+        errorMessage = error,
+        processingMessage = processingMessage,
+        onClearError = {
+            error =
+                null
+        },
+        onClearMedia = {
+            media = null
+            processingMessage = null
+        },
+        onCancelProcessing = {
+            cancelSignal.set(true)
+            processingMessage =
+                "Cancelling…"
+        },
+        onSelectMedia = {
+            picker.launch(
+                Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    type = "*/*"
+                    putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("video/*", "audio/*"))
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+                },
+            )
+        },
+        onPrimaryAction = { operation ->
+            val selected = media
+            if (operation != Operation.CONVERT) {
+                processingMessage = "${operation.name.lowercase().replaceFirstChar { it.uppercase() }} processing is next in the queue"
+            } else if (selected == null || selected.sourceUri == null) {
+                error = "Select readable media before converting"
+            } else {
+                pendingConversion = selected
+                outputPicker.launch("${selected.name.substringBeforeLast('.')}.mp4")
+            }
+        },
+    )
 }

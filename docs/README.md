@@ -26,3 +26,13 @@ The archive contains `magnetarjanus_prd.md`, `magnetar_janus/DESIGN.md`, and fou
 4. Do not claim format, codec, or metadata support until it is implemented and tested on a physical/emulated device.
 5. Run the milestone verification steps and update its status when handing work to the next agent.
 6. Never mark a milestone complete in `STATUS.md` without evidence for every acceptance criterion.
+
+## Before pushing
+
+Install the tracked pre-push hook once per clone:
+
+```bash
+./scripts/install-git-hooks.sh
+```
+
+It blocks `git push` unless Ktlint formatting, Android Lint, unit tests, and debug assembly pass. Run `./gradlew ktlintFormat` only when you intend to apply the official Kotlin formatting changes; review the diff before committing.

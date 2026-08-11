@@ -81,6 +81,15 @@ cd MagnetarJanus
 
 The debug APK is generated beneath `app/build/outputs/apk/debug/`.
 
+Install the tracked pre-push quality gate once per clone:
+
+```bash
+./scripts/install-git-hooks.sh
+./gradlew ktlintCheck
+```
+
+The hook runs Ktlint, Android Lint, unit tests, and debug assembly before any push. Use `./gradlew ktlintFormat` to apply Kotlin formatting, then review the resulting diff.
+
 Connected UI/instrumentation tests require an emulator or physical Android device:
 
 ```bash
