@@ -5,6 +5,9 @@ This directory is the implementation source of truth for agents working on Magne
 | Document | Purpose |
 | --- | --- |
 | [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) | Ordered milestones, ownership boundaries, acceptance criteria, and verification commands. |
+| [STATUS.md](STATUS.md) | Current implementation progress, verified checks, and known limitations. |
+
+The repository-level [`README.md`](../README.md) is the product overview and onboarding entry point. Keep it concise and accurate; put detailed execution requirements in the plan and time-sensitive completion evidence in the status document.
 
 ## Design sources
 
@@ -22,3 +25,4 @@ The archive contains `magnetarjanus_prd.md`, `magnetar_janus/DESIGN.md`, and fou
 3. Keep UI state independent of Android and codec APIs so preview/tests do not require a real file or encoder.
 4. Do not claim format, codec, or metadata support until it is implemented and tested on a physical/emulated device.
 5. Run the milestone verification steps and update its status when handing work to the next agent.
+6. Never mark a milestone complete in `STATUS.md` without evidence for every acceptance criterion.

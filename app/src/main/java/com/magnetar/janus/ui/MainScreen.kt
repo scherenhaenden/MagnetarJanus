@@ -19,6 +19,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -48,19 +51,21 @@ import com.magnetar.janus.ui.theme.JanusOutline
 import com.magnetar.janus.ui.theme.JanusPrimary
 import com.magnetar.janus.ui.theme.JanusSurface
 import com.magnetar.janus.ui.theme.JanusSurfaceLow
+import com.magnetar.janus.ui.theme.JanusError
+import androidx.compose.ui.graphics.Brush
 
 @Composable
-fun JanusApp(media: MediaInfo?, onSelectMedia: () -> Unit, onClearMedia: () -> Unit) {
-    JanusScreen(media, onSelectMedia, onClearMedia)
+fun JanusApp(media: MediaInfo?, loading: Boolean = false, errorMessage: String? = null, processingMessage: String? = null, onClearError: () -> Unit = {}, onSelectMedia: () -> Unit, onClearMedia: () -> Unit, onPrimaryAction: (Operation) -> Unit = {}) {
+    JanusScreen(media, loading, errorMessage, processingMessage, onClearError, onSelectMedia, onClearMedia, onPrimaryAction)
 }
 
 @Composable
-fun JanusScreen(media: MediaInfo?, onSelectMedia: () -> Unit, onClearMedia: () -> Unit) {
+fun JanusScreen(media: MediaInfo?, loading: Boolean = false, errorMessage: String? = null, processingMessage: String? = null, onClearError: () -> Unit = {}, onSelectMedia: () -> Unit, onClearMedia: () -> Unit, onPrimaryAction: (Operation) -> Unit = {}) {
     var operation by remember { mutableStateOf(Operation.SPLIT) }
     var selectedDuration by remember { mutableLongStateOf(60L) }
-    Column(Modifier.fillMaxSize().background(JanusBackground).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(JanusBackground, JanusBackground.copy(blue = .10f)))).verticalScroll(rememberScrollState()).statusBarsPadding().padding(horizontal = 20.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Header()
-        ImportPanel(media, onSelectMedia, onClearMedia)
+        ImportPanel(media, loading, errorMessage, onClearError, onSelectMedia, onClearMedia)
         OperationSelector(operation) { operation = it }
         if (media != null) {
             when (operation) {
@@ -69,7 +74,8 @@ fun JanusScreen(media: MediaInfo?, onSelectMedia: () -> Unit, onClearMedia: () -
                 Operation.AUDIO -> AudioWorkspace(media)
             }
             OutputConfiguration(operation)
-            Button(onClick = {}, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(8.dp), colors = ButtonDefaults.buttonColors(containerColor = JanusPrimary, contentColor = Color(0xFF003919))) {
+            if (processingMessage != null) Text(processingMessage, color = if (processingMessage.startsWith("Conversion complete")) JanusPrimary else JanusError, style = MaterialTheme.typography.bodyMedium)
+            Button(onClick = { onPrimaryAction(operation) }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(8.dp), colors = ButtonDefaults.buttonColors(containerColor = JanusPrimary, contentColor = Color(0xFF003919))) {
                 Text(if (operation == Operation.CONVERT) "CONVERT" else if (operation == Operation.SPLIT) "SPLIT" else "EXPORT", style = MaterialTheme.typography.labelLarge)
             }
         }
@@ -88,9 +94,14 @@ fun JanusScreen(media: MediaInfo?, onSelectMedia: () -> Unit, onClearMedia: () -
     }
 }
 
-@Composable private fun ImportPanel(media: MediaInfo?, onSelectMedia: () -> Unit, onClearMedia: () -> Unit) {
+@Composable private fun ImportPanel(media: MediaInfo?, loading: Boolean, errorMessage: String?, onClearError: () -> Unit, onSelectMedia: () -> Unit, onClearMedia: () -> Unit) {
     Card(Modifier.fillMaxWidth().clickable(onClick = onSelectMedia), colors = CardDefaults.cardColors(containerColor = JanusSurfaceLow), border = BorderStroke(1.dp, JanusOutline), shape = RoundedCornerShape(12.dp)) {
-        if (media == null) {
+        if (loading) {
+            Column(Modifier.fillMaxWidth().padding(vertical = 38.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator(Modifier.size(28.dp), color = JanusPrimary, strokeWidth = 2.dp)
+                Spacer(Modifier.height(10.dp)); Text("INSPECTING MEDIA", color = JanusPrimary, style = MaterialTheme.typography.labelLarge)
+            }
+        } else if (media == null) {
             Column(Modifier.fillMaxWidth().padding(vertical = 38.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("▣", color = JanusPrimary, style = MaterialTheme.typography.displaySmall)
                 Spacer(Modifier.height(10.dp)); Text("SELECT MEDIA", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium)
@@ -107,6 +118,9 @@ fun JanusScreen(media: MediaInfo?, onSelectMedia: () -> Unit, onClearMedia: () -
                 }
                 Text("REPLACE MEDIA", color = JanusPrimary, style = MaterialTheme.typography.labelSmall, modifier = Modifier.clickable(onClick = onClearMedia))
             }
+        }
+        if (errorMessage != null) {
+            Text(errorMessage, color = JanusError, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).clickable(onClick = onClearError))
         }
     }
 }
