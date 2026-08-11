@@ -26,6 +26,7 @@ import com.magnetar.janus.data.JobState
 import com.magnetar.janus.data.MediaMetadataReader
 import com.magnetar.janus.data.MediaSplitter
 import com.magnetar.janus.data.Mp4RemuxConverter
+import com.magnetar.janus.data.PublicSplitOutput
 import com.magnetar.janus.data.SplitRequest
 import com.magnetar.janus.model.MediaInfo
 import com.magnetar.janus.model.Operation
@@ -35,7 +36,6 @@ import com.magnetar.janus.ui.JanusApp
 import com.magnetar.janus.ui.theme.MagnetarJanusTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
 class MainActivity : ComponentActivity() {
@@ -161,18 +161,33 @@ private fun MediaPickerApp() {
                             .MediaJob(kind = JobKind.SPLIT, inputName = selected.name)
                     history.save(job)
                     history.update(job.id, JobState.RUNNING)
-                    val outputDirectory = File(context.filesDir, "outputs").apply { mkdirs() }
+                    val directoryName = OutputNaming.splitDirectoryName(selected.name, System.currentTimeMillis())
                     val results =
                         segments.mapIndexed { index, segment ->
-                            val output = File(outputDirectory, OutputNaming.splitFileName(selected.name, index + 1))
+                            val output =
+                                PublicSplitOutput.create(
+                                    context,
+                                    OutputNaming.splitFileName(selected.name, index + 1),
+                                    directoryName,
+                                )
                             MediaSplitter(
                                 context,
-                            ).split(SplitRequest(selected.sourceUri.toUri(), Uri.fromFile(output), segment, cancelSignal::get))
+                            ).split(SplitRequest(selected.sourceUri.toUri(), output.uri, segment, cancelSignal::get)).also { result ->
+                                if (result.isSuccess) {
+                                    PublicSplitOutput.publish(
+                                        context,
+                                        output,
+                                    )
+                                } else {
+                                    PublicSplitOutput.discard(context, output)
+                                }
+                            }
                         }
                     val failed = results.firstOrNull { it.isFailure }
                     if (failed == null) {
-                        history.update(job.id, JobState.COMPLETE, "${results.size} segments")
-                        processingMessage = "Split complete: ${results.size} files"
+                        val location = "Movies/Magnetar Janus/Splits/$directoryName"
+                        history.update(job.id, JobState.COMPLETE, "${results.size} verified segments in $location")
+                        processingMessage = "Split complete: ${results.size} verified files in $location"
                     } else {
                         history.update(
                             job.id,

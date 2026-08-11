@@ -113,9 +113,7 @@ private class MediaTrackWriter(
             } finally {
                 muxer.release()
             }
-            val verification = requireNotNull(openDescriptor(context, outputUri, "r")) { "Output validation failed" }
-            check(verification.statSize > 0) { "Output validation failed" }
-            verification.close()
+            verifyMediaOutput(context, outputUri)
         } finally {
             extractor.release()
             input.close()
