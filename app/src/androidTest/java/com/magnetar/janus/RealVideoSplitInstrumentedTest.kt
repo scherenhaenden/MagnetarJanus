@@ -48,7 +48,10 @@ class RealVideoSplitInstrumentedTest {
                 try {
                     extractor.setDataSource(output.absolutePath)
                     assertEquals("$inputName split $index should contain video and audio", 2, extractor.trackCount)
-                    assertTrue("$inputName split $index should have duration", extractor.getTrackFormat(0).getLong(MediaFormat.KEY_DURATION) > 0)
+                    assertTrue(
+                        "$inputName split $index should have duration",
+                        extractor.getTrackFormat(0).getLong(MediaFormat.KEY_DURATION) > 0,
+                    )
                 } finally {
                     extractor.release()
                     output.delete()
