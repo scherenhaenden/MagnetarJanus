@@ -7,13 +7,13 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.magnetar.janus.data.MediaSplitter
 import com.magnetar.janus.data.SplitRequest
 import com.magnetar.janus.model.Segment
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 
 class RealVideoSplitInstrumentedTest {
     @Test
