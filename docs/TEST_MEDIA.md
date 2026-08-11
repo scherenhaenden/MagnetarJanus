@@ -33,3 +33,24 @@ ffprobe -hide_banner test-media/janus-avc-aac.mp4
 ```
 
 The fixtures are intentionally short and synthetic; they are suitable for smoke tests, not performance benchmarking.
+
+## Openly licensed downloads
+
+For manual testing with real footage, download the following into the ignored `test-media-open/` directory:
+
+```bash
+mkdir -p test-media-open
+curl -L -o test-media-open/Audio.wav \
+  https://upload.wikimedia.org/wikipedia/commons/b/b5/Audio.wav
+curl -L -o test-media-open/big-buck-bunny-720p-5mb.webm \
+  https://upload.wikimedia.org/wikipedia/commons/e/e7/Big_buck_bunny_720p_5mb.webm
+```
+
+`Audio.wav` is released under CC0 by its uploader; the source page is [Wikimedia Commons — Audio.wav](https://commons.wikimedia.org/wiki/File:Audio.wav). The 30-second Big Buck Bunny WebM is VP9/Opus and is published under CC BY-SA 4.0; see [Wikimedia Commons — Big buck bunny 720p 5mb.webm](https://commons.wikimedia.org/wiki/File:Big_buck_bunny_720p_5mb.webm). Credit the listed authors and retain the license when redistributing modified copies.
+
+These downloads are deliberately ignored by Git because they are test fixtures, not application assets. After downloading, copy them to a device:
+
+```bash
+adb push test-media-open/Audio.wav /sdcard/Music/
+adb push test-media-open/big-buck-bunny-720p-5mb.webm /sdcard/Movies/
+```
