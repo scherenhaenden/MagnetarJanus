@@ -101,32 +101,40 @@ private class MediaTrackWriter(
                 val selectedFormats = tracks.indices.mapNotNull { index -> extractor.getTrackFormat(index).takeIf { tracks[index] >= 0 } }
                 val buffer = ByteBuffer.allocate(bufferCapacity(selectedFormats))
                 val info = MediaCodec.BufferInfo()
-                for (index in tracks.indices) {
-                    if (tracks[index] < 0) continue
-                    extractor.selectTrack(index)
-                    if (startUs > 0) extractor.seekTo(startUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC)
-                    var baseUs = -1L
-                    while (true) {
-                        if (isCancelled()) throw CancellationException("Operation cancelled")
-                        val timestamp = extractor.sampleTime
-                        if (timestamp < 0) break
-                        if (timestamp < startUs) {
-                            extractor.advance()
-                            continue
-                        }
-                        if (endUs != null && timestamp >= endUs) break
-                        if (baseUs < 0) baseUs = timestamp
-                        info.offset = 0
-                        info.size = extractor.readSampleData(buffer, 0)
-                        if (info.size < 0) break
-                        info.presentationTimeUs = timestamp - baseUs
-                        info.flags = extractor.sampleFlags.toBufferFlags()
-                        muxer.writeSampleData(tracks[index], buffer, info)
+                val selected = tracks.indices.filter { tracks[it] >= 0 }
+                selected.forEach { extractor.selectTrack(it) }
+                if (startUs > 0) extractor.seekTo(startUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC)
+                val active = BooleanArray(tracks.size) { tracks[it] >= 0 }
+                val baseUs = LongArray(tracks.size) { -1L }
+                while (active.any { it }) {
+                    if (isCancelled()) throw CancellationException("Operation cancelled")
+                    val sourceTrack = extractor.sampleTrackIndex
+                    if (sourceTrack < 0 || !active[sourceTrack]) break
+                    val timestamp = extractor.sampleTime
+                    if (timestamp < startUs) {
                         extractor.advance()
+                        continue
                     }
-                    extractor.unselectTrack(index)
-                    Log.i(TAG, "track=$index samplesWritten=true")
+                    if (endUs != null && timestamp >= endUs) {
+                        extractor.unselectTrack(sourceTrack)
+                        active[sourceTrack] = false
+                        continue
+                    }
+                    if (baseUs[sourceTrack] < 0) baseUs[sourceTrack] = timestamp
+                    info.offset = 0
+                    info.size = extractor.readSampleData(buffer, 0)
+                    if (info.size < 0) {
+                        extractor.unselectTrack(sourceTrack)
+                        active[sourceTrack] = false
+                        continue
+                    }
+                    info.presentationTimeUs = timestamp - baseUs[sourceTrack]
+                    info.flags = extractor.sampleFlags.toBufferFlags()
+                    muxer.writeSampleData(tracks[sourceTrack], buffer, info)
+                    extractor.advance()
                 }
+                selected.filter { active[it] }.forEach { extractor.unselectTrack(it) }
+                selected.forEach { Log.i(TAG, "track=$it samplesWritten=true") }
                 muxer.stop()
             } finally {
                 muxer.release()
