@@ -1,0 +1,24 @@
+# MagnetarJanus documentation
+
+This directory is the implementation source of truth for agents working on MagnetarJanus.
+
+| Document | Purpose |
+| --- | --- |
+| [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) | Ordered milestones, ownership boundaries, acceptance criteria, and verification commands. |
+
+## Design sources
+
+Do not copy or edit design-source files during product work. Use them as references:
+
+- `../design/ChatGPT Image 11. Aug. 2026, 08_08_59.png` — visual direction image.
+- `../design/stitch_magnetar_janus_media_converter.zip` — screen references, HTML prototypes, PRD, and design-system notes.
+
+The archive contains `magnetarjanus_prd.md`, `magnetar_janus/DESIGN.md`, and four screen variants: empty import, split mode, navigation drawer, and active conversion. Extract it into a temporary directory only when inspection is needed; do not commit extracted copies unless the team explicitly decides to version them.
+
+## Working agreement
+
+1. Read the whole implementation plan before changing code, then work only on the assigned milestone.
+2. Treat the design references and plan acceptance criteria as requirements. Record a deliberate product decision when they conflict.
+3. Keep UI state independent of Android and codec APIs so preview/tests do not require a real file or encoder.
+4. Do not claim format, codec, or metadata support until it is implemented and tested on a physical/emulated device.
+5. Run the milestone verification steps and update its status when handing work to the next agent.
