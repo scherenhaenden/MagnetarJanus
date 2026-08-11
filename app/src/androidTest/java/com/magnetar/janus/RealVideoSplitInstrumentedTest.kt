@@ -17,42 +17,45 @@ import java.io.FileOutputStream
 
 class RealVideoSplitInstrumentedTest {
     @Test
-    fun realH264AacVideoSplitsWithBothTracks() {
+    fun realH264AacVideosSplitWithBothTracks() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val input = File("/sdcard/Download/problem-video.mp4")
-        assumeTrue("Push problem-video.mp4 to /sdcard/Download first", input.exists())
-        val sandboxInput = File(context.cacheDir, "problem-video.mp4")
         val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
-        automation.adoptShellPermissionIdentity()
-        try {
-            FileInputStream(input).use { source ->
-                FileOutputStream(sandboxInput).use { target -> source.copyTo(target) }
-            }
-        } finally {
-            automation.dropShellPermissionIdentity()
-        }
-        val outputDirectory = File(context.cacheDir, "instrumented-splits").apply { mkdirs() }
-        val segments = listOf(Segment(0, 90), Segment(90, 180))
-
-        segments.forEachIndexed { index, segment ->
-            val output = File(outputDirectory, "part-$index.mp4")
-            val result =
-                MediaSplitter(context).split(
-                    SplitRequest(Uri.fromFile(sandboxInput), Uri.fromFile(output), segment),
-                )
-            assertTrue("split $index failed: ${result.exceptionOrNull()?.message}", result.isSuccess)
-            assertTrue("split $index is empty", output.length() > 0)
-            val extractor = MediaExtractor()
+        val inputs = listOf("problem-video.mp4", "youtube-video.mp4")
+        inputs.forEach { inputName ->
+            val input = File("/sdcard/Download/$inputName")
+            assumeTrue("Push $inputName to /sdcard/Download first", input.exists())
+            val sandboxInput = File(context.cacheDir, inputName)
+            automation.adoptShellPermissionIdentity()
             try {
-                extractor.setDataSource(output.absolutePath)
-                assertEquals("split $index should contain video and audio", 2, extractor.trackCount)
-                assertTrue("split $index should have duration", extractor.getTrackFormat(0).getLong(MediaFormat.KEY_DURATION) > 0)
+                FileInputStream(input).use { source ->
+                    FileOutputStream(sandboxInput).use { target -> source.copyTo(target) }
+                }
             } finally {
-                extractor.release()
-                output.delete()
+                automation.dropShellPermissionIdentity()
             }
+            val outputDirectory = File(context.cacheDir, "instrumented-splits/$inputName").apply { mkdirs() }
+            val segments = listOf(Segment(0, 90), Segment(90, 180))
+
+            segments.forEachIndexed { index, segment ->
+                val output = File(outputDirectory, "part-$index.mp4")
+                val result =
+                    MediaSplitter(context).split(
+                        SplitRequest(Uri.fromFile(sandboxInput), Uri.fromFile(output), segment),
+                    )
+                assertTrue("$inputName split $index failed: ${result.exceptionOrNull()?.message}", result.isSuccess)
+                assertTrue("$inputName split $index is empty", output.length() > 0)
+                val extractor = MediaExtractor()
+                try {
+                    extractor.setDataSource(output.absolutePath)
+                    assertEquals("$inputName split $index should contain video and audio", 2, extractor.trackCount)
+                    assertTrue("$inputName split $index should have duration", extractor.getTrackFormat(0).getLong(MediaFormat.KEY_DURATION) > 0)
+                } finally {
+                    extractor.release()
+                    output.delete()
+                }
+            }
+            outputDirectory.delete()
+            sandboxInput.delete()
         }
-        outputDirectory.delete()
-        sandboxInput.delete()
     }
 }
