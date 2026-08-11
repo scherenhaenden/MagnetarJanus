@@ -29,6 +29,7 @@ import com.magnetar.janus.data.Mp4RemuxConverter
 import com.magnetar.janus.data.SplitRequest
 import com.magnetar.janus.model.MediaInfo
 import com.magnetar.janus.model.Operation
+import com.magnetar.janus.model.OutputNaming
 import com.magnetar.janus.model.Segment
 import com.magnetar.janus.ui.JanusApp
 import com.magnetar.janus.ui.theme.MagnetarJanusTheme
@@ -162,7 +163,7 @@ private fun MediaPickerApp() {
                     val outputDirectory = File(context.filesDir, "outputs").apply { mkdirs() }
                     val results =
                         segments.mapIndexed { index, segment ->
-                            val output = File(outputDirectory, "${selected.name.substringBeforeLast('.')}-${index + 1}.mp4")
+                            val output = File(outputDirectory, OutputNaming.splitFileName(selected.name, index + 1))
                             MediaSplitter(
                                 context,
                             ).split(SplitRequest(selected.sourceUri.toUri(), Uri.fromFile(output), segment, cancelSignal::get))

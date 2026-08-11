@@ -5,6 +5,7 @@ import com.magnetar.janus.model.AudioCodec
 import com.magnetar.janus.model.ConversionSupport
 import com.magnetar.janus.model.MediaContainer
 import com.magnetar.janus.model.MediaKind
+import com.magnetar.janus.model.OutputNaming
 import com.magnetar.janus.model.ProcessingMode
 import com.magnetar.janus.model.SplitPlanner
 import com.magnetar.janus.model.TranscodePlanner
@@ -16,6 +17,16 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SplitPlannerTest {
+    @Test fun outputNaming_createsSortableTwoDigitSplitNames() {
+        assertEquals("recording-01.mp4", OutputNaming.splitFileName("recording.mov", 1))
+        assertEquals("recording-12.mp4", OutputNaming.splitFileName("recording.mov", 12))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun outputNaming_rejectsZeroIndex() {
+        OutputNaming.splitFileName("recording.mov", 0)
+    }
+
     @Test fun transcodePlanner_prefersRemuxForCompatibleTracks() {
         val plan =
             TranscodePlanner.plan(
