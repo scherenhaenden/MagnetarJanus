@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Magnetar Janus</string>
+    <string name="action_select_media">SELECCIONAR MEDIO</string>
+    <string name="action_replace_media">REEMPLAZAR MEDIO</string>
+    <string name="action_convert">CONVERTIR</string>
+    <string name="action_split">DIVIDIR</string>
+    <string name="action_export">EXPORTAR</string>
+    <string name="action_cancel">CANCELAR</string>
+    <string name="state_inspecting_media">INSPECCIONANDO MEDIO</string>
+    <string name="state_processing">PROCESANDO…</string>
+    <string name="message_select_media">Abre un archivo de vídeo o audio para empezar</string>
+    <string name="manual_cuts_label">CORTES MANUALES (segundos)</string>
+</resources>

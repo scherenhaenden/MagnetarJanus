@@ -29,7 +29,7 @@
 
 | Check | Result | Scope |
 | --- | --- | --- |
-| `./gradlew ktlintCheck :app:testDebugUnitTest :app:lintDebug :app:assembleDebug` | Pass — 14/14 tests, 0 lint issues | Formatting, split planning/conversion support contracts, Android lint, and debug APK assembly. |
+| `./gradlew ktlintCheck :app:testDebugUnitTest :app:lintDebug :app:assembleDebug` | Pass — 17/17 tests, 0 lint issues | Formatting, split planning, conversion and transcoding-plan contracts, Android lint, and debug APK assembly. |
 | `./gradlew :app:lintDebug` | Pass — 0 issues | Android source, resources, manifest, and dependency configuration. |
 | `./gradlew :app:assembleDebug` | Pass | Debug Kotlin/resources/APK assembly. |
 | Timestamp override build | Pass | `-PjanusVersion=2026-08-11-00-00-011`. |

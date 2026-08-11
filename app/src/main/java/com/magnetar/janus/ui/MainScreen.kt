@@ -2,7 +2,6 @@
 
 package com.magnetar.janus.ui
 
-import android.graphics.BitmapFactory
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -51,7 +50,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -271,11 +269,6 @@ fun JanusScreen(
             }
         } else {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                media.previewPath?.let { path ->
-                    BitmapFactory.decodeFile(path)?.asImageBitmap()?.let { bitmap ->
-                        Image(bitmap, contentDescription = "Preview of ${media.name}", modifier = Modifier.fillMaxWidth().height(120.dp))
-                    }
-                }
                 Text(
                     if (media.kind ==
                         MediaKind.VIDEO

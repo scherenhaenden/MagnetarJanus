@@ -2,6 +2,8 @@ package com.magnetar.janus.data
 
 import android.content.Context
 import java.util.UUID
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 enum class JobKind { CONVERT, SPLIT, AUDIO }
 
@@ -22,8 +24,11 @@ class JobHistoryStore(
     context: Context,
 ) {
     private val preferences = context.getSharedPreferences("janus_jobs", Context.MODE_PRIVATE)
+    private val lock = ReentrantLock()
 
-    fun list(): List<MediaJob> =
+    fun list(): List<MediaJob> = lock.withLock { listUnlocked() }
+
+    private fun listUnlocked(): List<MediaJob> =
         preferences
             .getStringSet(KEY_JOBS, emptySet())
             .orEmpty()
@@ -31,8 +36,10 @@ class JobHistoryStore(
             .sortedByDescending { it.createdAt }
 
     fun save(job: MediaJob) {
-        val updated = list().filterNot { it.id == job.id } + job
-        preferences.edit().putStringSet(KEY_JOBS, updated.map(::encode).toSet()).apply()
+        lock.withLock {
+            val updated = listUnlocked().filterNot { it.id == job.id } + job
+            preferences.edit().putStringSet(KEY_JOBS, updated.map(::encode).toSet()).commit()
+        }
     }
 
     fun update(
@@ -41,12 +48,16 @@ class JobHistoryStore(
         message: String? = null,
         outputPath: String? = null,
     ) {
-        list().firstOrNull { it.id == id }?.let {
-            save(it.copy(state = state, message = message, outputPath = outputPath ?: it.outputPath))
+        lock.withLock {
+            listUnlocked().firstOrNull { it.id == id }?.let {
+                val updated = it.copy(state = state, message = message, outputPath = outputPath ?: it.outputPath)
+                val records = listUnlocked().filterNot { record -> record.id == id } + updated
+                preferences.edit().putStringSet(KEY_JOBS, records.map(::encode).toSet()).commit()
+            }
         }
     }
 
-    fun clear() = preferences.edit().remove(KEY_JOBS).apply()
+    fun clear() = lock.withLock { preferences.edit().remove(KEY_JOBS).commit() }
 
     private fun encode(job: MediaJob): String =
         listOf(job.id, job.kind.name, job.inputName, job.outputPath.orEmpty(), job.state.name, job.message.orEmpty(), job.createdAt)

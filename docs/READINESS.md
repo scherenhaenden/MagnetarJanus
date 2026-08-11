@@ -1,53 +1,53 @@
 # Magnetar Janus — readiness
 
 **Updated:** 2026-08-11  
-**Branch:** `feature/readiness-4-to-100`
+**Branch:** `feature/universal-transcoding`
 
 ## Product readiness
 
-| Área | Readiness | Estado actual |
+| Area | Readiness | Current status |
 |---|---:|---|
-| Repository setup | 100% | GitHub público, `master`, feature branch y CI |
-| Documentation | 100% | README, plan, status, diseño y matriz de transcodificación documentados |
-| Build system | 100% | Gradle 9.7.0; APK debug compila |
-| Unit tests | 100% del dominio actual | 14/14 tests pasan |
+| Repository setup | 100% | Public GitHub repository, `master`, feature branch, and CI |
+| Documentation | 100% | README, plan, status, design references, and transcoding matrix |
+| Build system | 100% | Gradle 9.7.0; debug APK assembles |
+| Unit tests | 100% of current domain | 17/17 tests pass |
 | Code quality | 100% | Ktlint + Android Lint; 0 issues |
-| Visual design foundation | 100% del shell actual | Shell oscuro, gradiente, drawer, cards, selectors, estados, preview y workspace responsive |
-| Media picker | 100% del alcance de importación | Audio/video picker, permisos persistentes, validación MIME e inspección en background |
-| Real metadata inspection | 100% del alcance actual | Duración, MIME, tamaño, dimensiones, codec, bitrate, frame rate, container y preview |
-| Conversion engine | 100% del remux compatible | MP4 remux, destino elegido por usuario, tracks compatibles, progreso, cancelación y validación |
-| Audio extraction | 100% del alcance compatible | Extracción de tracks de audio a MP4/M4A sin recodificar |
-| Actual file splitting | 100% del alcance compatible | Segmentos temporales reales con `MediaExtractor`/`MediaMuxer` y timestamps normalizados |
-| Custom/manual cuts | 100% del alcance actual | Cortes separados por límites manuales normalizados y ejecutados como outputs independientes |
-| Queue/history/recovery | 100% del registro durable | Estados queued/running/complete/failed/cancelled persistidos para recuperación del estado |
-| Device/instrumentation testing | 0% verificado | Falta ejecutar en emulador o dispositivo físico |
-| Production release readiness | 0% | Faltan matriz real de codecs, firma y validación final de release |
+| Visual design foundation | 100% of current shell | Dark gradient shell, drawer, cards, selectors, states, preview, and responsive workspaces |
+| Media picker | 100% of import scope | Audio/video picker, persistable permissions, MIME validation, and background inspection |
+| Real metadata inspection | 100% of current scope | Duration, MIME, size, dimensions, codec, bitrate, frame rate, container, and preview |
+| Conversion engine | 100% of compatible remux scope | MP4 remux, user-selected destination, compatible tracks, progress, cancellation, and validation |
+| Audio extraction | 100% of compatible scope | Audio tracks exported to MP4/M4A without re-encoding |
+| Actual file splitting | 100% of compatible scope | Real time-bounded segments with normalized timestamps |
+| Custom/manual cuts | 100% of current scope | Normalized manual boundaries executed as independent outputs |
+| Queue/history/recovery | 100% of durable record scope | Queued/running/complete/failed/cancelled states persist for recovery |
+| Device/instrumentation testing | 0% verified | Emulator or physical-device execution is still required |
+| Production release readiness | 0% | Codec matrix, signing, and final release validation remain |
 
-> Los porcentajes del 100% anteriores son por el alcance compatible implementado. No significan que Janus acepte cualquier codec, contenedor o transformación de forma universal.
+> The 100% values above apply only to the compatible scope implemented. They do not mean Janus accepts every codec, container, or transformation universally.
 
-## Remux versus transcodificación
+## Remux versus transcoding
 
-| Caso | ¿Remux basta? | ¿Transcodificación necesaria? |
+| Case | Is remux enough? | Is transcoding required? |
 |---|---:|---:|
-| MP4 compatible → MP4 | Sí | No |
-| MKV/WebM compatible → MP4 | A veces | Si los codecs no son compatibles |
-| Cambiar resolución | No | Sí |
-| Cambiar bitrate | No | Sí |
-| Cambiar frame rate | No | Sí |
-| H.264 → HEVC/AV1 | No | Sí |
-| Extraer audio compatible | A veces | Solo si hay que cambiar codec |
-| Cortes precisos fuera de keyframes | No siempre | Sí, para precisión completa |
+| Compatible MP4 → MP4 | Yes | No |
+| Compatible MKV/WebM → MP4 | Sometimes | If codecs are incompatible |
+| Change resolution | No | Yes |
+| Change bitrate | No | Yes |
+| Change frame rate | No | Yes |
+| H.264 → HEVC/AV1 | No | Yes |
+| Extract compatible audio | Sometimes | Only when the codec must change |
+| Frame-accurate cuts outside keyframes | Not always | Yes |
 
-## Transcodificación universal pendiente
+## Universal transcoding status
 
-La matriz completa de capacidades, controles y fases está en [TRANSCODING_MATRIX.md](TRANSCODING_MATRIX.md). La implementación actual debe elegir remux solo cuando el formato y los tracks sean compatibles; en cualquier otro caso debe informar que requiere el pipeline de transcodificación.
+The complete capability, control, and phase matrix is in [TRANSCODING_MATRIX.md](TRANSCODING_MATRIX.md). Janus must choose remux only when the format and tracks are compatible; otherwise it must report that the transcoding pipeline is required.
 
-## Verificación local
+## Verification
 
 ```text
 ./gradlew ktlintCheck :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 Ktlint: PASS
-Unit tests: 14/14 PASS
+Unit tests: 17/17 PASS
 Android Lint: 0 issues
 Debug APK: PASS
 ```

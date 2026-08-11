@@ -6,9 +6,7 @@ import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMuxer
 import android.net.Uri
-import android.os.ParcelFileDescriptor
 import com.magnetar.janus.model.Segment
-import java.io.File
 import java.nio.ByteBuffer
 import java.util.concurrent.CancellationException
 
@@ -70,7 +68,7 @@ private class MediaTrackWriter(
         includeTrack: (Int, MediaFormat) -> Boolean,
     ) {
         val input = openDescriptor(context, inputUri, "r") ?: error("Unable to open input media")
-        val output = openDescriptor(context, outputUri, "w") ?: error("Unable to open output destination")
+        val output = openDescriptor(context, outputUri, "rw") ?: error("Unable to open output destination")
         val extractor = MediaExtractor()
         try {
             extractor.setDataSource(input.fileDescriptor)
@@ -83,20 +81,28 @@ private class MediaTrackWriter(
                 }
                 check(tracks.any { it >= 0 }) { "No compatible media tracks found" }
                 muxer.start()
-                val buffer = ByteBuffer.allocate(1024 * 1024)
+                val selectedFormats = tracks.indices.mapNotNull { index -> extractor.getTrackFormat(index).takeIf { tracks[index] >= 0 } }
+                val buffer = ByteBuffer.allocate(bufferCapacity(selectedFormats))
                 val info = MediaCodec.BufferInfo()
                 for (index in tracks.indices) {
                     if (tracks[index] < 0) continue
                     extractor.selectTrack(index)
                     if (startUs > 0) extractor.seekTo(startUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC)
+                    var baseUs = -1L
                     while (true) {
                         if (isCancelled()) throw CancellationException("Operation cancelled")
                         val timestamp = extractor.sampleTime
-                        if (timestamp < 0 || (endUs != null && timestamp >= endUs)) break
+                        if (timestamp < 0) break
+                        if (timestamp < startUs) {
+                            extractor.advance()
+                            continue
+                        }
+                        if (endUs != null && timestamp >= endUs) break
+                        if (baseUs < 0) baseUs = timestamp
                         info.offset = 0
                         info.size = extractor.readSampleData(buffer, 0)
                         if (info.size < 0) break
-                        info.presentationTimeUs = (timestamp - startUs).coerceAtLeast(0)
+                        info.presentationTimeUs = timestamp - baseUs
                         info.flags = extractor.sampleFlags.toBufferFlags()
                         muxer.writeSampleData(tracks[index], buffer, info)
                         extractor.advance()
@@ -116,29 +122,4 @@ private class MediaTrackWriter(
             output.close()
         }
     }
-}
-
-private fun openDescriptor(
-    context: Context,
-    uri: Uri,
-    mode: String,
-): ParcelFileDescriptor? =
-    if (uri.scheme == "file") {
-        ParcelFileDescriptor.open(
-            File(requireNotNull(uri.path)),
-            if (mode == "r") {
-                ParcelFileDescriptor.MODE_READ_ONLY
-            } else {
-                ParcelFileDescriptor.MODE_WRITE_ONLY or ParcelFileDescriptor.MODE_CREATE or ParcelFileDescriptor.MODE_TRUNCATE
-            },
-        )
-    } else {
-        context.contentResolver.openFileDescriptor(uri, mode)
-    }
-
-private fun Int.toBufferFlags(): Int {
-    var flags = 0
-    if (this and MediaExtractor.SAMPLE_FLAG_SYNC != 0) flags = flags or MediaCodec.BUFFER_FLAG_KEY_FRAME
-    if (this and MediaExtractor.SAMPLE_FLAG_PARTIAL_FRAME != 0) flags = flags or MediaCodec.BUFFER_FLAG_PARTIAL_FRAME
-    return flags
 }

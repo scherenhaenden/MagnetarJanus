@@ -6,6 +6,10 @@ This directory is the implementation source of truth for agents working on Magne
 | --- | --- |
 | [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) | Ordered milestones, ownership boundaries, acceptance criteria, and verification commands. |
 | [STATUS.md](STATUS.md) | Current implementation progress, verified checks, and known limitations. |
+| [READINESS.md](READINESS.md) | English readiness snapshot and remux/transcoding boundary. |
+| [TRANSCODING_MATRIX.md](TRANSCODING_MATRIX.md) | Universal codec, container, quality-control, and pipeline matrix. |
+| [LOCALIZATION_PLAN.md](LOCALIZATION_PLAN.md) | English source strings, locale rollout, and translation workflow. |
+| [TEST_MEDIA.md](TEST_MEDIA.md) | Synthetic and openly licensed media fixtures for manual testing. |
 
 The repository-level [`README.md`](../README.md) is the product overview and onboarding entry point. Keep it concise and accurate; put detailed execution requirements in the plan and time-sensitive completion evidence in the status document.
 

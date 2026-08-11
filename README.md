@@ -41,6 +41,7 @@ The original source must always remain unchanged. Outputs are new files and must
 
 See [project status](docs/STATUS.md) for the verification record and [implementation plan](docs/IMPLEMENTATION_PLAN.md) for the complete roadmap.
 See [readiness](docs/READINESS.md) and the [universal transcoding matrix](docs/TRANSCODING_MATRIX.md) for the current capability boundaries.
+The English-first localization rollout is described in [docs/LOCALIZATION_PLAN.md](docs/LOCALIZATION_PLAN.md).
 
 ## Design language
 
@@ -82,6 +83,12 @@ cd MagnetarJanus
 ```
 
 The debug APK is generated beneath `app/build/outputs/apk/debug/`.
+
+Generate reproducible audio/video fixtures for device testing with [docs/TEST_MEDIA.md](docs/TEST_MEDIA.md):
+
+```bash
+./scripts/generate-test-media.sh
+```
 
 Install the tracked pre-push quality gate once per clone:
 
