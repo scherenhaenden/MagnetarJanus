@@ -5,10 +5,13 @@ import android.content.Context
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import androidx.core.net.toUri
+import java.io.File
 
 data class PendingSplitOutput(
     val uri: android.net.Uri,
     val location: String,
+    val isMediaStoreItem: Boolean,
 )
 
 /** Creates user-visible split files under Movies/Magnetar Janus/Splits. */
@@ -18,8 +21,16 @@ object PublicSplitOutput {
         displayName: String,
         directoryName: String,
     ): PendingSplitOutput {
-        check(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { "Public split output requires Android 10 or later" }
         val location = "${Environment.DIRECTORY_MOVIES}/Magnetar Janus/Splits/$directoryName"
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            val directory = File(requireNotNull(context.getExternalFilesDir(Environment.DIRECTORY_MOVIES)), "Splits/$directoryName")
+            check(directory.mkdirs() || directory.isDirectory) { "Unable to create split output directory" }
+            return PendingSplitOutput(
+                File(directory, displayName).toUri(),
+                directory.absolutePath,
+                isMediaStoreItem = false,
+            )
+        }
         val values =
             ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
@@ -31,13 +42,14 @@ object PublicSplitOutput {
             requireNotNull(context.contentResolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)) {
                 "Unable to create a public split output"
             }
-        return PendingSplitOutput(uri, location)
+        return PendingSplitOutput(uri, location, isMediaStoreItem = true)
     }
 
     fun publish(
         context: Context,
         output: PendingSplitOutput,
     ) {
+        if (!output.isMediaStoreItem) return
         context.contentResolver.update(output.uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
     }
 
@@ -45,6 +57,10 @@ object PublicSplitOutput {
         context: Context,
         output: PendingSplitOutput,
     ) {
-        context.contentResolver.delete(output.uri, null, null)
+        if (output.isMediaStoreItem) {
+            context.contentResolver.delete(output.uri, null, null)
+        } else {
+            File(requireNotNull(output.uri.path)).delete()
+        }
     }
 }
