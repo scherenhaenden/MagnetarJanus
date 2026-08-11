@@ -20,8 +20,8 @@
 | M0 — Baseline and decisions | In progress | Debug build works; design archive inspected. | Media-engine ADR, codec/container support matrix, output/storage rules, and persistence decision. |
 | M1 — Design system and shell | 100% for current shell | Janus palette, responsive gradient shell, navigation drawer, preview, typography, app header, import surface, operation selector, loading/error states, and workspace cards exist. | Full visual comparison, TalkBack audit, and future settings screens are product-hardening work outside this shell scope. |
 | M2 — Import and metadata | 100% for current import scope | Picker validates audio/video MIME, persists read permission, handles cancellation/errors, and reads duration, MIME, size, dimensions, bitrate, frame rate, container, and video thumbnail off the main thread. | Audio waveform and richer media-library integration are separate roadmap features. |
-| M3 — Workspace configuration | Started | Mode selector, deterministic split preview, output cards, and contextual action status exist. | Custom duration, manual cuts, format compatibility, destination selection, and complete validation. |
-| M4 — Processing and queue | 100% for compatible MP4 remux scope | Platform MP4 remux converter is wired to Convert with user-selected output, compatible track mapping, per-track progress, cancellation, and output validation. | Queue persistence, background execution, sharing/history, and transcoding are separate roadmap features. |
+| M3 — Workspace configuration | 100% for current split scope | Mode selector, deterministic split preview, manual cut input, output cards, and contextual action status exist. | Rich waveform editing and universal format controls remain roadmap work. |
+| M4 — Processing and queue | 100% for compatible MP4 operation scope | Remux, audio extraction, real segment writing, manual cut execution, cancellation, output validation, and durable job state are implemented. | Background scheduling/resume, sharing/history UI, and universal transcoding are separate roadmap features. |
 | M5 — Library and settings | Not started | — | Full milestone implementation. |
 | M6 — Release quality | Started | Local unit suite and debug assembly are available. | UI/device matrix, media fixtures, profiling, licensing, signing, and release audit. |
 
@@ -43,9 +43,9 @@ The combined build is rerun after documentation and verification changes. Connec
 
 - The MP4 remux engine is wired to Convert, writes to a user-selected document, validates the output, and supports only compatible streams; this is the complete defined conversion scope for this milestone.
 - Audio/video duration and basic technical attributes are now extracted from the selected URI; thumbnail/waveform rendering is still pending.
-- Split and Audio actions still report their queued status; Convert executes the remux path.
-- Custom duration and manual cut controls are not implemented.
-- No durable queue, history, output picker, progress, cancellation, or recovery exists.
+- Split and Audio actions execute compatible MP4 operations off the main thread; universal transcoding remains explicitly unsupported until the capability matrix is implemented.
+- Custom waveform editing and frame-accurate transcode cuts are not implemented.
+- Durable job records exist; queue scheduling, history UI, and automatic resume policy remain outstanding.
 - The header menu/settings affordances are not interactive.
 - Real codec/container support has not been promised or tested.
 - UI tests, connected platform tests, physical-device media tests, and release signing remain outstanding.

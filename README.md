@@ -35,10 +35,12 @@ The original source must always remain unchanged. Outputs are new files and must
 | Android media picker | 100% for import scope | Selects audio/video documents, retains persistable read permission, validates MIME, handles cancellation/errors, and inspects off the main thread. |
 | Real metadata inspection | 100% for current metadata scope | Duration, MIME, size, dimensions, codec MIME, bitrate, frame rate, container, and video preview are read from the selected URI. |
 | Conversion engine | 100% for compatible MP4 remux scope | User-selected output, compatible track mapping, per-track progress, cancellation, and output validation are implemented; transcoding is out of scope. |
-| Queue, history, and recovery | Not started | Planned for M4–M5. |
+| Audio extraction and splitting | Implemented for compatible MP4 scope | Audio extraction, automatic segments, manual cut execution, cancellation, and output validation run off the main thread. |
+| Queue, history, and recovery | Core durable records implemented | Job state survives process recreation; scheduling, history UI, and automatic resume remain roadmap work. |
 | Production release | Not ready | No signed production artifact or validated codec matrix exists. |
 
 See [project status](docs/STATUS.md) for the verification record and [implementation plan](docs/IMPLEMENTATION_PLAN.md) for the complete roadmap.
+See [readiness](docs/READINESS.md) and the [universal transcoding matrix](docs/TRANSCODING_MATRIX.md) for the current capability boundaries.
 
 ## Design language
 

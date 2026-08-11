@@ -36,6 +36,7 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
@@ -57,6 +58,7 @@ import androidx.compose.ui.unit.sp
 import com.magnetar.janus.model.MediaInfo
 import com.magnetar.janus.model.MediaKind
 import com.magnetar.janus.model.Operation
+import com.magnetar.janus.model.Segment
 import com.magnetar.janus.model.SplitPlanner
 import com.magnetar.janus.ui.theme.JanusBackground
 import com.magnetar.janus.ui.theme.JanusError
@@ -77,7 +79,7 @@ fun JanusApp(
     onClearError: () -> Unit = {},
     onSelectMedia: () -> Unit,
     onClearMedia: () -> Unit,
-    onPrimaryAction: (Operation) -> Unit = {},
+    onPrimaryAction: (Operation, List<Segment>) -> Unit = { _, _ -> },
     onCancelProcessing: () -> Unit = {},
 ) {
     JanusScreen(
@@ -104,11 +106,12 @@ fun JanusScreen(
     onClearError: () -> Unit = {},
     onSelectMedia: () -> Unit,
     onClearMedia: () -> Unit,
-    onPrimaryAction: (Operation) -> Unit = {},
+    onPrimaryAction: (Operation, List<Segment>) -> Unit = { _, _ -> },
     onCancelProcessing: () -> Unit = {},
 ) {
     var operation by remember { mutableStateOf(Operation.SPLIT) }
     var selectedDuration by remember { mutableLongStateOf(60L) }
+    var manualCuts by remember { mutableStateOf("") }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val drawerScope = rememberCoroutineScope()
     ModalNavigationDrawer(
@@ -156,7 +159,7 @@ fun JanusScreen(
             if (media != null) {
                 when (operation) {
                     Operation.CONVERT -> ConvertWorkspace(media)
-                    Operation.SPLIT -> SplitWorkspace(media, selectedDuration) { selectedDuration = it }
+                    Operation.SPLIT -> SplitWorkspace(media, selectedDuration, manualCuts, { manualCuts = it }) { selectedDuration = it }
                     Operation.AUDIO -> AudioWorkspace(media)
                 }
                 OutputConfiguration(operation)
@@ -181,7 +184,14 @@ fun JanusScreen(
                 Button(
                     enabled = !processing,
                     onClick = {
-                        onPrimaryAction(operation)
+                        val cuts = manualCuts.split(',').mapNotNull { it.trim().toLongOrNull() }
+                        val segments =
+                            if (cuts.isEmpty()) {
+                                SplitPlanner.automaticSegments(media.durationSeconds, selectedDuration)
+                            } else {
+                                SplitPlanner.manualSegments(media.durationSeconds, cuts)
+                            }
+                        onPrimaryAction(operation, segments)
                     },
                     modifier =
                         Modifier.fillMaxWidth().height(
@@ -339,6 +349,8 @@ fun JanusScreen(
 @Composable private fun SplitWorkspace(
     media: MediaInfo,
     selectedDuration: Long,
+    manualCuts: String,
+    onManualCutsChanged: (String) -> Unit,
     onDurationSelected: (Long) -> Unit,
 ) {
     StudioCard {
@@ -382,7 +394,21 @@ fun JanusScreen(
                 ) { Text("CUSTOM", style = MaterialTheme.typography.labelSmall) }
             }
         }
-        val segments = SplitPlanner.automaticSegments(media.durationSeconds, selectedDuration)
+        OutlinedTextField(
+            value = manualCuts,
+            onValueChange = onManualCutsChanged,
+            label = { Text("MANUAL CUTS (seconds)") },
+            placeholder = { Text("e.g. 45, 120") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        val cuts = manualCuts.split(',').mapNotNull { it.trim().toLongOrNull() }
+        val segments =
+            if (cuts.isEmpty()) {
+                SplitPlanner.automaticSegments(media.durationSeconds, selectedDuration)
+            } else {
+                SplitPlanner.manualSegments(media.durationSeconds, cuts)
+            }
         Text(
             "${segments.size} segments · ${segments.joinToString(" · ") { SplitPlanner.formatDuration(it.durationSeconds) }}",
             color = JanusOnSurfaceVariant,

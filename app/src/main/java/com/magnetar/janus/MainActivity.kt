@@ -3,6 +3,7 @@
 package com.magnetar.janus
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -16,15 +17,24 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.net.toUri
+import com.magnetar.janus.data.AudioExtractionRequest
+import com.magnetar.janus.data.AudioExtractor
 import com.magnetar.janus.data.ConversionRequest
+import com.magnetar.janus.data.JobHistoryStore
+import com.magnetar.janus.data.JobKind
+import com.magnetar.janus.data.JobState
 import com.magnetar.janus.data.MediaMetadataReader
+import com.magnetar.janus.data.MediaSplitter
 import com.magnetar.janus.data.Mp4RemuxConverter
+import com.magnetar.janus.data.SplitRequest
 import com.magnetar.janus.model.MediaInfo
 import com.magnetar.janus.model.Operation
+import com.magnetar.janus.model.Segment
 import com.magnetar.janus.ui.JanusApp
 import com.magnetar.janus.ui.theme.MagnetarJanusTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
 class MainActivity : ComponentActivity() {
@@ -44,6 +54,8 @@ private fun MediaPickerApp() {
     var processingMessage by remember { mutableStateOf<String?>(null) }
     var processing by remember { mutableStateOf(false) }
     var pendingConversion by remember { mutableStateOf<MediaInfo?>(null) }
+    var pendingOperation by remember { mutableStateOf(Operation.CONVERT) }
+    val history = remember { JobHistoryStore(context) }
     val cancelSignal = remember { AtomicBoolean(false) }
     val picker =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -71,16 +83,39 @@ private fun MediaPickerApp() {
                 processing = true
                 processingMessage = "Converting to MP4… 0%"
                 cancelSignal.set(false)
+                val job =
+                    com.magnetar.janus.data.MediaJob(
+                        kind =
+                            if (pendingOperation ==
+                                Operation.AUDIO
+                            ) {
+                                JobKind.AUDIO
+                            } else {
+                                JobKind.CONVERT
+                            },
+                        inputName = selected.name,
+                    )
+                history.save(job)
+                history.update(job.id, JobState.RUNNING)
                 val result =
-                    Mp4RemuxConverter(
-                        context,
-                    ).convert(ConversionRequest(selected.sourceUri.toUri(), outputUri, cancelSignal::get)) { progress ->
-                        processingMessage = "Converting to MP4… ${(progress.fraction * 100).toInt()}%"
+                    if (pendingOperation == Operation.AUDIO) {
+                        AudioExtractor(context).extract(AudioExtractionRequest(selected.sourceUri.toUri(), outputUri, cancelSignal::get))
+                    } else {
+                        Mp4RemuxConverter(
+                            context,
+                        ).convert(ConversionRequest(selected.sourceUri.toUri(), outputUri, cancelSignal::get)) { progress ->
+                            processingMessage = "Converting to MP4… ${(progress.fraction * 100).toInt()}%"
+                        }
                     }
                 processingMessage =
                     result.fold({
+                        history.update(job.id, JobState.COMPLETE, outputPath = outputUri.toString())
                         "Conversion complete: ${selected.name.substringBeforeLast('.')}.mp4"
-                    }, { if (cancelSignal.get()) "Conversion cancelled" else "Conversion failed: ${it.message ?: "unsupported media"}" })
+                    }, {
+                        val cancelled = cancelSignal.get()
+                        history.update(job.id, if (cancelled) JobState.CANCELLED else JobState.FAILED, it.message)
+                        if (cancelled) "Conversion cancelled" else "Conversion failed: ${it.message ?: "unsupported media"}"
+                    })
                 processing = false
                 pendingConversion = null
             }
@@ -114,15 +149,48 @@ private fun MediaPickerApp() {
                 },
             )
         },
-        onPrimaryAction = { operation ->
+        onPrimaryAction = { operation, segments ->
             val selected = media
-            if (operation != Operation.CONVERT) {
-                processingMessage = "${operation.name.lowercase().replaceFirstChar { it.uppercase() }} processing is next in the queue"
+            if (operation == Operation.SPLIT && selected?.sourceUri != null) {
+                scope.launch(Dispatchers.IO) {
+                    processing = true
+                    val job =
+                        com.magnetar.janus.data
+                            .MediaJob(kind = JobKind.SPLIT, inputName = selected.name)
+                    history.save(job)
+                    history.update(job.id, JobState.RUNNING)
+                    val outputDirectory = File(context.filesDir, "outputs").apply { mkdirs() }
+                    val results =
+                        segments.mapIndexed { index, segment ->
+                            val output = File(outputDirectory, "${selected.name.substringBeforeLast('.')}-${index + 1}.mp4")
+                            MediaSplitter(
+                                context,
+                            ).split(SplitRequest(selected.sourceUri.toUri(), Uri.fromFile(output), segment, cancelSignal::get))
+                        }
+                    val failed = results.firstOrNull { it.isFailure }
+                    if (failed == null) {
+                        history.update(job.id, JobState.COMPLETE, "${results.size} segments")
+                        processingMessage = "Split complete: ${results.size} files"
+                    } else {
+                        history.update(
+                            job.id,
+                            if (cancelSignal.get()) JobState.CANCELLED else JobState.FAILED,
+                            failed.exceptionOrNull()?.message,
+                        )
+                        processingMessage = failed.exceptionOrNull()?.message ?: "Split failed"
+                    }
+                    processing = false
+                }
+            } else if (operation == Operation.CONVERT || operation == Operation.AUDIO) {
+                if (selected == null || selected.sourceUri == null) {
+                    error = "Select readable media before converting"
+                } else {
+                    pendingOperation = operation
+                    pendingConversion = selected
+                    outputPicker.launch("${selected.name.substringBeforeLast('.')}.${if (operation == Operation.AUDIO) "m4a" else "mp4"}")
+                }
             } else if (selected == null || selected.sourceUri == null) {
                 error = "Select readable media before converting"
-            } else {
-                pendingConversion = selected
-                outputPicker.launch("${selected.name.substringBeforeLast('.')}.mp4")
             }
         },
     )
