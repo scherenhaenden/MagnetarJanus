@@ -33,7 +33,7 @@ android {
                 now.dayOfMonth,
                 now.hour,
                 now.minute,
-                now.second,
+                now.nano / 1_000_000,
             )
         versionCode = (System.currentTimeMillis() / 1000L).toInt()
         versionName = providers.gradleProperty("janusVersion").orElse(generatedVersion).get()
