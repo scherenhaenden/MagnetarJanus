@@ -29,6 +29,7 @@ import com.magnetar.janus.data.Mp4RemuxConverter
 import com.magnetar.janus.data.PublicSplitOutput
 import com.magnetar.janus.data.SplitRequest
 import com.magnetar.janus.model.MediaInfo
+import com.magnetar.janus.model.MediaKind
 import com.magnetar.janus.model.Operation
 import com.magnetar.janus.model.OutputNaming
 import com.magnetar.janus.model.Segment
@@ -169,6 +170,7 @@ private fun MediaPickerApp() {
                                     context,
                                     OutputNaming.splitFileName(selected.name, index + 1),
                                     directoryName,
+                                    audioOnly = selected.kind == MediaKind.AUDIO,
                                 )
                             MediaSplitter(
                                 context,
@@ -185,7 +187,7 @@ private fun MediaPickerApp() {
                         }
                     val failed = results.firstOrNull { it.isFailure }
                     if (failed == null) {
-                        val location = "Movies/Magnetar Janus/Splits/$directoryName"
+                        val location = "${if (selected.kind == MediaKind.AUDIO) "Music" else "Movies"}/Magnetar Janus/Splits/$directoryName"
                         history.update(job.id, JobState.COMPLETE, "${results.size} verified segments in $location")
                         processingMessage = "Split complete: ${results.size} verified files in $location"
                     } else {

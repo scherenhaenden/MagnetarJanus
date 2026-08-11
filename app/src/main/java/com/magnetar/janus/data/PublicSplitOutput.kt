@@ -20,10 +20,12 @@ object PublicSplitOutput {
         context: Context,
         displayName: String,
         directoryName: String,
+        audioOnly: Boolean,
     ): PendingSplitOutput {
-        val location = "${Environment.DIRECTORY_MOVIES}/Magnetar Janus/Splits/$directoryName"
+        val rootDirectory = if (audioOnly) Environment.DIRECTORY_MUSIC else Environment.DIRECTORY_MOVIES
+        val location = "$rootDirectory/Magnetar Janus/Splits/$directoryName"
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            val directory = File(requireNotNull(context.getExternalFilesDir(Environment.DIRECTORY_MOVIES)), "Splits/$directoryName")
+            val directory = File(requireNotNull(context.getExternalFilesDir(rootDirectory)), "Splits/$directoryName")
             check(directory.mkdirs() || directory.isDirectory) { "Unable to create split output directory" }
             return PendingSplitOutput(
                 File(directory, displayName).toUri(),
@@ -34,12 +36,17 @@ object PublicSplitOutput {
         val values =
             ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
-                put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4")
+                put(MediaStore.MediaColumns.MIME_TYPE, if (audioOnly) "audio/mp4" else "video/mp4")
                 put(MediaStore.MediaColumns.RELATIVE_PATH, location)
                 put(MediaStore.MediaColumns.IS_PENDING, 1)
             }
         val uri =
-            requireNotNull(context.contentResolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)) {
+            requireNotNull(
+                context.contentResolver.insert(
+                    if (audioOnly) MediaStore.Audio.Media.EXTERNAL_CONTENT_URI else MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                    values,
+                ),
+            ) {
                 "Unable to create a public split output"
             }
         return PendingSplitOutput(uri, location, isMediaStoreItem = true)
