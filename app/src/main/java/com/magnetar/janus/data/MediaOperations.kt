@@ -6,6 +6,7 @@ import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMuxer
 import android.net.Uri
+import android.util.Log
 import com.magnetar.janus.model.Segment
 import java.nio.ByteBuffer
 import java.util.concurrent.CancellationException
@@ -59,6 +60,10 @@ class MediaSplitter(
 private class MediaTrackWriter(
     private val context: Context,
 ) {
+    private companion object {
+        const val TAG = "Janus.MediaTrackWriter"
+    }
+
     fun write(
         inputUri: Uri,
         outputUri: Uri,
@@ -72,50 +77,70 @@ private class MediaTrackWriter(
         val extractor = MediaExtractor()
         try {
             extractor.setDataSource(input.fileDescriptor)
+            Log.i(TAG, "input=$inputUri tracks=${extractor.trackCount} startUs=$startUs endUs=$endUs")
             val muxer = MediaMuxer(output.fileDescriptor, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
             try {
                 val tracks = IntArray(extractor.trackCount) { -1 }
                 for (index in 0 until extractor.trackCount) {
                     val format = extractor.getTrackFormat(index)
-                    if (includeTrack(index, format)) tracks[index] = muxer.addTrack(format)
+                    val durationUs = if (format.containsKey(MediaFormat.KEY_DURATION)) format.getLong(MediaFormat.KEY_DURATION) else -1
+                    val maxInput =
+                        if (format.containsKey(MediaFormat.KEY_MAX_INPUT_SIZE)) format.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE) else -1
+                    Log.i(
+                        TAG,
+                        "track=$index mime=${format.getString(MediaFormat.KEY_MIME)} durationUs=$durationUs " +
+                            "maxInput=$maxInput",
+                    )
+                    if (includeTrack(index, format)) {
+                        requireMp4RemuxCodec(format)
+                        tracks[index] = muxer.addTrack(format)
+                    }
                 }
                 check(tracks.any { it >= 0 }) { "No compatible media tracks found" }
                 muxer.start()
                 val selectedFormats = tracks.indices.mapNotNull { index -> extractor.getTrackFormat(index).takeIf { tracks[index] >= 0 } }
                 val buffer = ByteBuffer.allocate(bufferCapacity(selectedFormats))
                 val info = MediaCodec.BufferInfo()
-                for (index in tracks.indices) {
-                    if (tracks[index] < 0) continue
-                    extractor.selectTrack(index)
-                    if (startUs > 0) extractor.seekTo(startUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC)
-                    var baseUs = -1L
-                    while (true) {
-                        if (isCancelled()) throw CancellationException("Operation cancelled")
-                        val timestamp = extractor.sampleTime
-                        if (timestamp < 0) break
-                        if (timestamp < startUs) {
-                            extractor.advance()
-                            continue
-                        }
-                        if (endUs != null && timestamp >= endUs) break
-                        if (baseUs < 0) baseUs = timestamp
-                        info.offset = 0
-                        info.size = extractor.readSampleData(buffer, 0)
-                        if (info.size < 0) break
-                        info.presentationTimeUs = timestamp - baseUs
-                        info.flags = extractor.sampleFlags.toBufferFlags()
-                        muxer.writeSampleData(tracks[index], buffer, info)
+                val selected = tracks.indices.filter { tracks[it] >= 0 }
+                selected.forEach { extractor.selectTrack(it) }
+                if (startUs > 0) extractor.seekTo(startUs, MediaExtractor.SEEK_TO_CLOSEST_SYNC)
+                val active = BooleanArray(tracks.size) { tracks[it] >= 0 }
+                val baseUs = LongArray(tracks.size) { -1L }
+                while (active.any { it }) {
+                    if (isCancelled()) throw CancellationException("Operation cancelled")
+                    val sourceTrack = extractor.sampleTrackIndex
+                    if (sourceTrack < 0 || !active[sourceTrack]) break
+                    val timestamp = extractor.sampleTime
+                    if (timestamp < startUs) {
                         extractor.advance()
+                        continue
                     }
-                    extractor.unselectTrack(index)
+                    if (endUs != null && timestamp >= endUs) {
+                        extractor.unselectTrack(sourceTrack)
+                        active[sourceTrack] = false
+                        continue
+                    }
+                    if (baseUs[sourceTrack] < 0) baseUs[sourceTrack] = timestamp
+                    info.offset = 0
+                    info.size = extractor.readSampleData(buffer, 0)
+                    if (info.size < 0) {
+                        extractor.unselectTrack(sourceTrack)
+                        active[sourceTrack] = false
+                        continue
+                    }
+                    info.presentationTimeUs = timestamp - baseUs[sourceTrack]
+                    info.flags = extractor.sampleFlags.toBufferFlags()
+                    muxer.writeSampleData(tracks[sourceTrack], buffer, info)
+                    extractor.advance()
                 }
+                selected.filter { active[it] }.forEach { extractor.unselectTrack(it) }
+                selected.forEach { Log.i(TAG, "track=$it samplesWritten=true") }
                 muxer.stop()
             } finally {
                 muxer.release()
             }
-            val verification = requireNotNull(openDescriptor(context, outputUri, "r")) { "Output validation failed" }
-            check(verification.statSize > 0) { "Output validation failed" }
-            verification.close()
+            verifyMediaOutput(context, outputUri)
+            Log.i(TAG, "verified output=$outputUri")
         } finally {
             extractor.release()
             input.close()

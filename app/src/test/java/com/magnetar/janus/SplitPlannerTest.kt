@@ -22,6 +22,10 @@ class SplitPlannerTest {
         assertEquals("recording-12.mp4", OutputNaming.splitFileName("recording.mov", 12))
     }
 
+    @Test fun outputNaming_createsAStablePublicSplitDirectoryName() {
+        assertEquals("recording-123456", OutputNaming.splitDirectoryName("recording.mov", 123456L))
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun outputNaming_rejectsZeroIndex() {
         OutputNaming.splitFileName("recording.mov", 0)

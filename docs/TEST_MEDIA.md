@@ -32,6 +32,16 @@ On an emulator, drag the files onto the emulator window or use the same `adb pus
 ffprobe -hide_banner test-media/janus-avc-aac.mp4
 ```
 
+To split and verify a real H.264/AAC video locally:
+
+```bash
+./scripts/verify-video-split.sh \
+  test-media/YTDown.com_YouTube_Amon-Amarth-Saxons-and-Vikings_Media_PLzsWa20YIo_001_1080p.mp4 \
+  build/test-media/youtube-split 90
+```
+
+The verifier fails if any segment is empty or lacks a compatible video or audio stream. It uses FFmpeg as a host-side reference; Janus itself uses Android `MediaExtractor` and `MediaMuxer`, so the final in-app check still belongs on an emulator or device.
+
 The fixtures are intentionally short and synthetic; they are suitable for smoke tests, not performance benchmarking.
 
 ## Openly licensed downloads
