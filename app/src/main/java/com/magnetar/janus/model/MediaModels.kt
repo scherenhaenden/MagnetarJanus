@@ -8,9 +8,11 @@ data class MediaInfo(
     val kind: MediaKind,
     val durationSeconds: Long,
     val sourceUri: String? = null,
+    val previewPath: String? = null,
     val sizeBytes: Long? = null,
     val resolution: String? = null,
     val frameRate: String? = null,
+    val bitrate: String? = null,
     val codec: String? = null,
     val container: String? = null
 )

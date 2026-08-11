@@ -30,11 +30,11 @@ The original source must always remain unchanged. Outputs are new files and must
 | Area | Status | Notes |
 | --- | --- | --- |
 | Product and implementation plan | Complete | Agent-oriented milestones and acceptance criteria are documented. |
-| Visual design foundation | In progress | Responsive gradient shell, custom dark palette, typography, cards, selectors, loading, and error states exist. |
+| Visual design foundation | Complete for current shell | Responsive gradient shell, drawer, preview, custom dark palette, typography, cards, selectors, loading, and error states exist. |
 | Split-planning domain logic | Implemented | Automatic presets and normalized manual boundaries have unit tests. |
-| Android media picker | In progress | Selects audio/video documents, retains read permission, and inspects them off the main thread. |
-| Real metadata inspection | In progress | Duration, MIME, size, dimensions, codec MIME, and container are read from the selected URI. |
-| Conversion/extraction engine | Prototype | Compatible MP4 remux conversion is wired to Convert; extraction and transcoding are not complete. |
+| Android media picker | Complete for import scope | Selects audio/video documents, retains read permission, validates MIME, and inspects off the main thread. |
+| Real metadata inspection | Complete for current metadata scope | Duration, MIME, size, dimensions, codec MIME, bitrate, frame rate, container, and video preview are read from the selected URI. |
+| Conversion engine | Complete for compatible MP4 remux scope | User-selected output, track progress, cancellation, and output validation are implemented; transcoding is out of scope. |
 | Queue, history, and recovery | Not started | Planned for M4–M5. |
 | Production release | Not ready | No signed production artifact or validated codec matrix exists. |
 

@@ -2,7 +2,6 @@ package com.magnetar.janus
 
 import android.content.Intent
 import android.os.Bundle
-import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -24,7 +23,7 @@ import com.magnetar.janus.ui.JanusApp
 import com.magnetar.janus.ui.theme.MagnetarJanusTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,6 +40,9 @@ private fun MediaPickerApp() {
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var processingMessage by remember { mutableStateOf<String?>(null) }
+    var processing by remember { mutableStateOf(false) }
+    var pendingConversion by remember { mutableStateOf<MediaInfo?>(null) }
+    val cancelSignal = remember { AtomicBoolean(false) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val uri = result.data?.data ?: return@rememberLauncherForActivityResult
         runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
@@ -52,7 +54,25 @@ private fun MediaPickerApp() {
             loading = false
         }
     }
-    JanusApp(media = media, loading = loading, errorMessage = error, processingMessage = processingMessage, onClearError = { error = null }, onClearMedia = { media = null; processingMessage = null }, onSelectMedia = {
+    val outputPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("video/mp4")) { outputUri ->
+        val selected = pendingConversion ?: return@rememberLauncherForActivityResult
+        if (outputUri == null || selected.sourceUri == null) {
+            pendingConversion = null
+            return@rememberLauncherForActivityResult
+        }
+        scope.launch(Dispatchers.IO) {
+            processing = true
+            processingMessage = "Converting to MP4… 0%"
+            cancelSignal.set(false)
+            val result = Mp4RemuxConverter(context).convert(ConversionRequest(selected.sourceUri.toUri(), outputUri, cancelSignal::get)) { progress ->
+                processingMessage = "Converting to MP4… ${(progress.fraction * 100).toInt()}%"
+            }
+            processingMessage = result.fold({ "Conversion complete: ${selected.name.substringBeforeLast('.')}.mp4" }, { if (cancelSignal.get()) "Conversion cancelled" else "Conversion failed: ${it.message ?: "unsupported media"}" })
+            processing = false
+            pendingConversion = null
+        }
+    }
+    JanusApp(media = media, loading = loading, processing = processing, errorMessage = error, processingMessage = processingMessage, onClearError = { error = null }, onClearMedia = { media = null; processingMessage = null }, onCancelProcessing = { cancelSignal.set(true); processingMessage = "Cancelling…" }, onSelectMedia = {
         picker.launch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             type = "*/*"
             putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("video/*", "audio/*"))
@@ -66,12 +86,8 @@ private fun MediaPickerApp() {
         } else if (selected == null || selected.sourceUri == null) {
             error = "Select readable media before converting"
         } else {
-            scope.launch(Dispatchers.IO) {
-                processingMessage = "Converting to MP4…"
-                val output = File(context.cacheDir, "${selected.name.substringBeforeLast('.')}-${System.currentTimeMillis()}.mp4")
-                val result = Mp4RemuxConverter(context).convert(ConversionRequest(selected.sourceUri.toUri(), Uri.fromFile(output)))
-                processingMessage = result.fold({ "Conversion complete: ${output.name}" }, { "Conversion failed: ${it.message ?: "unsupported media"}" })
-            }
+            pendingConversion = selected
+            outputPicker.launch("${selected.name.substringBeforeLast('.')}.mp4")
         }
     })
 }

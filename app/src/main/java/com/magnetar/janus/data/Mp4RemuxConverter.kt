@@ -9,16 +9,20 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import java.io.File
 import java.nio.ByteBuffer
+import java.util.concurrent.CancellationException
 
-data class ConversionRequest(val input: Uri, val output: Uri)
+data class ConversionRequest(val input: Uri, val output: Uri, val isCancelled: () -> Boolean = { false })
+data class ConversionProgress(val completedTracks: Int, val totalTracks: Int) {
+    val fraction: Float get() = if (totalTracks == 0) 0f else completedTracks.toFloat() / totalTracks
+}
 
 interface MediaConverter {
-    fun convert(request: ConversionRequest): Result<Unit>
+    fun convert(request: ConversionRequest, onProgress: (ConversionProgress) -> Unit = {}): Result<Unit>
 }
 
 /** Remuxes compatible audio/video tracks into an MP4 container without re-encoding. */
 class Mp4RemuxConverter(private val context: Context) : MediaConverter {
-    override fun convert(request: ConversionRequest): Result<Unit> = runCatching {
+    override fun convert(request: ConversionRequest, onProgress: (ConversionProgress) -> Unit): Result<Unit> = runCatching {
         val extractor = MediaExtractor()
         val input = openDescriptor(context, request.input, "r") ?: error("Unable to open input media")
         val output = openDescriptor(context, request.output, "w") ?: error("Unable to open output destination")
@@ -27,12 +31,14 @@ class Mp4RemuxConverter(private val context: Context) : MediaConverter {
             val muxer = MediaMuxer(output.fileDescriptor, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
             try {
                 val trackMap = IntArray(extractor.trackCount) { -1 }
+                var completedTracks = 0
                 for (trackIndex in 0 until extractor.trackCount) {
                     val format = extractor.getTrackFormat(trackIndex)
                     val mime = format.getString(MediaFormat.KEY_MIME).orEmpty()
                     if (mime.startsWith("audio/") || mime.startsWith("video/")) trackMap[trackIndex] = muxer.addTrack(format)
                 }
                 check(trackMap.any { it >= 0 }) { "No compatible audio or video tracks found" }
+                val compatibleTracks = trackMap.count { it >= 0 }
                 muxer.start()
                 val buffer = ByteBuffer.allocate(1024 * 1024)
                 val info = MediaCodec.BufferInfo()
@@ -40,6 +46,7 @@ class Mp4RemuxConverter(private val context: Context) : MediaConverter {
                     if (trackMap[trackIndex] < 0) continue
                     extractor.selectTrack(trackIndex)
                     while (true) {
+                        if (request.isCancelled()) throw CancellationException("Conversion cancelled")
                         info.offset = 0
                         info.size = extractor.readSampleData(buffer, 0)
                         if (info.size < 0) break
@@ -49,11 +56,16 @@ class Mp4RemuxConverter(private val context: Context) : MediaConverter {
                         extractor.advance()
                     }
                     extractor.unselectTrack(trackIndex)
+                    completedTracks++
+                    onProgress(ConversionProgress(completedTracks, compatibleTracks))
                 }
                 muxer.stop()
             } finally {
                 muxer.release()
             }
+            val verification = requireNotNull(openDescriptor(context, request.output, "r")) { "Output validation failed" }
+            check(verification.statSize > 0) { "Output validation failed" }
+            verification.close()
         } finally {
             extractor.release()
             input.close()

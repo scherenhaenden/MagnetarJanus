@@ -3,6 +3,7 @@ package com.magnetar.janus
 import com.magnetar.janus.model.SplitPlanner
 import com.magnetar.janus.model.ConversionSupport
 import com.magnetar.janus.model.MediaKind
+import com.magnetar.janus.data.ConversionProgress
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -14,6 +15,11 @@ class SplitPlannerTest {
         assertEquals(listOf("MP4"), ConversionSupport.supportedOutputContainers(MediaKind.VIDEO))
         assertTrue(ConversionSupport.canRemuxToMp4(MediaKind.AUDIO))
         assertTrue(ConversionSupport.canRemuxToMp4(MediaKind.VIDEO))
+    }
+
+    @Test fun conversionProgress_reportsSafeFraction() {
+        assertEquals(0.5f, ConversionProgress(1, 2).fraction)
+        assertEquals(0f, ConversionProgress(0, 0).fraction)
     }
     @Test fun presetDurations_areWhatsAppPresets() =
         assertEquals(listOf(30L, 60L, 90L), SplitPlanner.presetDurations())
