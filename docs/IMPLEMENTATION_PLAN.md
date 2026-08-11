@@ -1,6 +1,6 @@
 # MagnetarJanus implementation plan
 
-**Status:** Planned  
+**Status:** In development; see [STATUS.md](STATUS.md) for current progress
 **Last updated:** 2026-08-11  
 **Product:** Android app for professional media conversion, extraction, and splitting.
 

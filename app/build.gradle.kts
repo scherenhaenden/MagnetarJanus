@@ -3,6 +3,15 @@ import java.time.LocalDateTime
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ktlint)
+}
+
+ktlint {
+    version.set("1.8.0")
+    android.set(true)
+    outputToConsole.set(true)
+    ignoreFailures.set(false)
+    enableExperimentalRules.set(false)
 }
 
 android {
@@ -17,7 +26,15 @@ android {
         targetSdk = 37
         // yyyy-MM-dd-HH-mm-sss; use -PjanusVersion for reproducible builds.
         val now = LocalDateTime.now()
-        val generatedVersion = "%04d-%02d-%02d-%02d-%02d-%03d".format(now.year, now.monthValue, now.dayOfMonth, now.hour, now.minute, now.second)
+        val generatedVersion =
+            "%04d-%02d-%02d-%02d-%02d-%03d".format(
+                now.year,
+                now.monthValue,
+                now.dayOfMonth,
+                now.hour,
+                now.minute,
+                now.second,
+            )
         versionCode = (System.currentTimeMillis() / 1000L).toInt()
         versionName = providers.gradleProperty("janusVersion").orElse(generatedVersion).get()
 

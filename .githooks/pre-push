@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Running Janus pre-push checks..."
+./gradlew ktlintCheck :app:lintDebug :app:testDebugUnitTest :app:assembleDebug \
+    -Pkotlin.compiler.execution.strategy=in-process --max-workers=2 --no-daemon --console=plain
+echo "Pre-push checks passed."
