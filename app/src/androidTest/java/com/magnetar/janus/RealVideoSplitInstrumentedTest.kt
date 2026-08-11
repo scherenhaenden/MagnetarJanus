@@ -47,11 +47,23 @@ class RealVideoSplitInstrumentedTest {
                 val extractor = MediaExtractor()
                 try {
                     extractor.setDataSource(output.absolutePath)
-                    assertEquals("$inputName split $index should contain video and audio", 2, extractor.trackCount)
-                    assertTrue(
-                        "$inputName split $index should have duration",
-                        extractor.getTrackFormat(0).getLong(MediaFormat.KEY_DURATION) > 0,
-                    )
+                    val codecs =
+                        (0 until extractor.trackCount)
+                            .map { track ->
+                                extractor.getTrackFormat(track).getString(MediaFormat.KEY_MIME)
+                            }.toSet()
+                    assertEquals("$inputName split $index should contain video and audio", setOf("video/avc", "audio/mp4a-latm"), codecs)
+                    codecs.forEach { codec ->
+                        val track =
+                            (0 until extractor.trackCount).first {
+                                extractor.getTrackFormat(it).getString(MediaFormat.KEY_MIME) ==
+                                    codec
+                            }
+                        assertTrue(
+                            "$inputName split $index $codec should have duration",
+                            extractor.getTrackFormat(track).getLong(MediaFormat.KEY_DURATION) > 0,
+                        )
+                    }
                 } finally {
                     extractor.release()
                     output.delete()
