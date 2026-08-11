@@ -10,7 +10,7 @@
 | Repository setup | 100% | GitHub público, `master`, feature branch y CI |
 | Documentation | 100% | README, plan, status, diseño y matriz de transcodificación documentados |
 | Build system | 100% | Gradle 9.7.0; APK debug compila |
-| Unit tests | 100% del dominio actual | 14/14 tests pasan |
+| Unit tests | 100% del dominio actual | 17/17 tests pasan |
 | Code quality | 100% | Ktlint + Android Lint; 0 issues |
 | Visual design foundation | 100% del shell actual | Shell oscuro, gradiente, drawer, cards, selectors, estados, preview y workspace responsive |
 | Media picker | 100% del alcance de importación | Audio/video picker, permisos persistentes, validación MIME e inspección en background |
@@ -47,7 +47,7 @@ La matriz completa de capacidades, controles y fases está en [TRANSCODING_MATRI
 ```text
 ./gradlew ktlintCheck :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 Ktlint: PASS
-Unit tests: 14/14 PASS
+Unit tests: 17/17 PASS
 Android Lint: 0 issues
 Debug APK: PASS
 ```

@@ -1,15 +1,54 @@
 package com.magnetar.janus
 
 import com.magnetar.janus.data.ConversionProgress
+import com.magnetar.janus.model.AudioCodec
 import com.magnetar.janus.model.ConversionSupport
+import com.magnetar.janus.model.MediaContainer
 import com.magnetar.janus.model.MediaKind
+import com.magnetar.janus.model.ProcessingMode
 import com.magnetar.janus.model.SplitPlanner
+import com.magnetar.janus.model.TranscodePlanner
+import com.magnetar.janus.model.TranscodeTarget
+import com.magnetar.janus.model.VideoCodec
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SplitPlannerTest {
+    @Test fun transcodePlanner_prefersRemuxForCompatibleTracks() {
+        val plan =
+            TranscodePlanner.plan(
+                MediaContainer.MP4,
+                VideoCodec.AVC,
+                AudioCodec.AAC,
+                TranscodeTarget(MediaContainer.MP4, VideoCodec.AVC, AudioCodec.AAC),
+            )
+        assertEquals(ProcessingMode.REMUX, plan.mode)
+    }
+
+    @Test fun transcodePlanner_requestsTranscodeForCodecChange() {
+        val plan =
+            TranscodePlanner.plan(
+                MediaContainer.MP4,
+                VideoCodec.AVC,
+                AudioCodec.AAC,
+                TranscodeTarget(MediaContainer.MP4, VideoCodec.HEVC, AudioCodec.AAC),
+            )
+        assertEquals(ProcessingMode.TRANSCODE, plan.mode)
+    }
+
+    @Test fun transcodePlanner_rejectsAudioTargetWithoutAudioTrack() {
+        val plan =
+            TranscodePlanner.plan(
+                MediaContainer.MP4,
+                VideoCodec.AVC,
+                null,
+                TranscodeTarget(MediaContainer.M4A, audioCodec = AudioCodec.AAC),
+            )
+        assertEquals(ProcessingMode.UNSUPPORTED, plan.mode)
+    }
+
     @Test fun conversionSupport_exposesMp4ForAudioAndVideo() {
         assertEquals(listOf("MP4"), ConversionSupport.supportedOutputContainers(MediaKind.AUDIO))
         assertEquals(listOf("MP4"), ConversionSupport.supportedOutputContainers(MediaKind.VIDEO))

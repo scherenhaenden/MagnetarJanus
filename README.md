@@ -83,6 +83,12 @@ cd MagnetarJanus
 
 The debug APK is generated beneath `app/build/outputs/apk/debug/`.
 
+Generate reproducible audio/video fixtures for device testing with [docs/TEST_MEDIA.md](docs/TEST_MEDIA.md):
+
+```bash
+./scripts/generate-test-media.sh
+```
+
 Install the tracked pre-push quality gate once per clone:
 
 ```bash
