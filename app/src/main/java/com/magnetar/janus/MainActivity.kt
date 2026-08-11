@@ -74,7 +74,7 @@ private fun MediaPickerApp() {
             }
         }
     val outputPicker =
-        rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("video/mp4")) { outputUri ->
+        rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("*/*")) { outputUri ->
             val selected = pendingConversion ?: return@rememberLauncherForActivityResult
             if (outputUri == null || selected.sourceUri == null) {
                 pendingConversion = null
@@ -155,6 +155,7 @@ private fun MediaPickerApp() {
             if (operation == Operation.SPLIT && selected?.sourceUri != null) {
                 scope.launch(Dispatchers.IO) {
                     processing = true
+                    cancelSignal.set(false)
                     val job =
                         com.magnetar.janus.data
                             .MediaJob(kind = JobKind.SPLIT, inputName = selected.name)

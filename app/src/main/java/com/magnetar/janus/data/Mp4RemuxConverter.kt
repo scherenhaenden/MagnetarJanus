@@ -6,8 +6,6 @@ import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMuxer
 import android.net.Uri
-import android.os.ParcelFileDescriptor
-import java.io.File
 import java.nio.ByteBuffer
 import java.util.concurrent.CancellationException
 
@@ -42,7 +40,7 @@ class Mp4RemuxConverter(
         runCatching {
             val extractor = MediaExtractor()
             val input = openDescriptor(context, request.input, "r") ?: error("Unable to open input media")
-            val output = openDescriptor(context, request.output, "w") ?: error("Unable to open output destination")
+            val output = openDescriptor(context, request.output, "rw") ?: error("Unable to open output destination")
             try {
                 extractor.setDataSource(input.fileDescriptor)
                 val muxer = MediaMuxer(output.fileDescriptor, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
@@ -57,7 +55,8 @@ class Mp4RemuxConverter(
                     check(trackMap.any { it >= 0 }) { "No compatible audio or video tracks found" }
                     val compatibleTracks = trackMap.count { it >= 0 }
                     muxer.start()
-                    val buffer = ByteBuffer.allocate(1024 * 1024)
+                    val formats = trackMap.indices.mapNotNull { index -> extractor.getTrackFormat(index).takeIf { trackMap[index] >= 0 } }
+                    val buffer = ByteBuffer.allocate(bufferCapacity(formats))
                     val info = MediaCodec.BufferInfo()
                     for (trackIndex in 0 until extractor.trackCount) {
                         if (trackMap[trackIndex] < 0) continue
@@ -89,32 +88,4 @@ class Mp4RemuxConverter(
                 output.close()
             }
         }
-}
-
-private fun openDescriptor(
-    context: Context,
-    uri: Uri,
-    mode: String,
-): ParcelFileDescriptor? =
-    if (uri.scheme == "file") {
-        ParcelFileDescriptor.open(
-            File(requireNotNull(uri.path)),
-            if (mode ==
-                "r"
-            ) {
-                ParcelFileDescriptor.MODE_READ_ONLY
-            } else {
-                ParcelFileDescriptor.MODE_WRITE_ONLY or ParcelFileDescriptor.MODE_CREATE or
-                    ParcelFileDescriptor.MODE_TRUNCATE
-            },
-        )
-    } else {
-        context.contentResolver.openFileDescriptor(uri, mode)
-    }
-
-private fun Int.toBufferFlags(): Int {
-    var flags = 0
-    if (this and MediaExtractor.SAMPLE_FLAG_SYNC != 0) flags = flags or MediaCodec.BUFFER_FLAG_KEY_FRAME
-    if (this and MediaExtractor.SAMPLE_FLAG_PARTIAL_FRAME != 0) flags = flags or MediaCodec.BUFFER_FLAG_PARTIAL_FRAME
-    return flags
 }

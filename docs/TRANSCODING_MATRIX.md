@@ -10,7 +10,8 @@ The current engine performs compatible MP4 remuxing. Universal conversion requir
 | WebM | VP8, VP9, AV1 | Opus, Vorbis | WebVTT |
 | MKV | H.264, HEVC, VP9, AV1, ProRes where supported | AAC, Opus, Vorbis, FLAC, PCM | SRT, ASS, PGS, chapters |
 | MOV | H.264, HEVC, ProRes where supported | AAC, ALAC, PCM | Timed text and metadata |
-| M4A/ADTS | — | AAC, ALAC, Opus | Tags and artwork |
+| M4A | — | AAC, ALAC, Opus where supported | Tags and artwork |
+| ADTS | — | AAC | Transport metadata only |
 | WAV/FLAC | — | PCM, FLAC | Tags |
 
 ## Video controls
