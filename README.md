@@ -41,6 +41,7 @@ The original source must always remain unchanged. Outputs are new files and must
 
 See [project status](docs/STATUS.md) for the verification record and [implementation plan](docs/IMPLEMENTATION_PLAN.md) for the complete roadmap.
 See [readiness](docs/READINESS.md) and the [universal transcoding matrix](docs/TRANSCODING_MATRIX.md) for the current capability boundaries.
+The English-first localization rollout is described in [docs/LOCALIZATION_PLAN.md](docs/LOCALIZATION_PLAN.md).
 
 ## Design language
 
