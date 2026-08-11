@@ -6,6 +6,7 @@ import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMuxer
 import android.net.Uri
+import android.util.Log
 import com.magnetar.janus.model.Segment
 import java.nio.ByteBuffer
 import java.util.concurrent.CancellationException
@@ -59,6 +60,10 @@ class MediaSplitter(
 private class MediaTrackWriter(
     private val context: Context,
 ) {
+    private companion object {
+        const val TAG = "Janus.MediaTrackWriter"
+    }
+
     fun write(
         inputUri: Uri,
         outputUri: Uri,
@@ -72,12 +77,24 @@ private class MediaTrackWriter(
         val extractor = MediaExtractor()
         try {
             extractor.setDataSource(input.fileDescriptor)
+            Log.i(TAG, "input=$inputUri tracks=${extractor.trackCount} startUs=$startUs endUs=$endUs")
             val muxer = MediaMuxer(output.fileDescriptor, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
             try {
                 val tracks = IntArray(extractor.trackCount) { -1 }
                 for (index in 0 until extractor.trackCount) {
                     val format = extractor.getTrackFormat(index)
-                    if (includeTrack(index, format)) tracks[index] = muxer.addTrack(format)
+                    val durationUs = if (format.containsKey(MediaFormat.KEY_DURATION)) format.getLong(MediaFormat.KEY_DURATION) else -1
+                    val maxInput =
+                        if (format.containsKey(MediaFormat.KEY_MAX_INPUT_SIZE)) format.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE) else -1
+                    Log.i(
+                        TAG,
+                        "track=$index mime=${format.getString(MediaFormat.KEY_MIME)} durationUs=$durationUs " +
+                            "maxInput=$maxInput",
+                    )
+                    if (includeTrack(index, format)) {
+                        requireMp4RemuxCodec(format)
+                        tracks[index] = muxer.addTrack(format)
+                    }
                 }
                 check(tracks.any { it >= 0 }) { "No compatible media tracks found" }
                 muxer.start()
@@ -108,12 +125,14 @@ private class MediaTrackWriter(
                         extractor.advance()
                     }
                     extractor.unselectTrack(index)
+                    Log.i(TAG, "track=$index samplesWritten=true")
                 }
                 muxer.stop()
             } finally {
                 muxer.release()
             }
             verifyMediaOutput(context, outputUri)
+            Log.i(TAG, "verified output=$outputUri")
         } finally {
             extractor.release()
             input.close()
